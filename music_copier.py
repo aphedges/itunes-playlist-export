@@ -61,6 +61,7 @@ def main():
 	playlist = get_playlist(root, playlist_name)
 	for song in playlist:
 		name, artist, album, location_source = get_song(root, song)
+		open('{}.m3u'.format(playlist_name), 'ab').write(f'/storage/emulated/0/Music/{normalize_name(artist)}/{normalize_name(album)}/{split(location_source)[1]}\n'.encode('utf8'))
 		location_destination = join(destination_dir, normalize_name(artist), normalize_name(album),
 			split(location_source)[1])
 		if os.path.isfile(location_destination):
