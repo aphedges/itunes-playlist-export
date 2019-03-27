@@ -10,6 +10,7 @@ from os.path import split
 import plistlib
 import re
 import shutil
+import subprocess
 from urllib.parse import unquote
 
 LIBRARY_FILE_NAME = r'D:\Alex\Music\iTunes\iTunes Library.xml'
@@ -59,9 +60,10 @@ def main():
 	root = plistlib.loads(library_text)
 	print('Reading playlist "{}"'.format(playlist_name))
 	playlist = get_playlist(root, playlist_name)
+	playlist_file_name = join(destination_dir, '{}.m3u'.format(playlist_name))
 	for song in playlist:
 		name, artist, album, location_source = get_song(root, song)
-		open('{}.m3u'.format(playlist_name), 'ab').write(f'/storage/emulated/0/Music/{normalize_name(artist)}/{normalize_name(album)}/{split(location_source)[1]}\n'.encode('utf8'))
+		open(playlist_file_name, 'ab').write(f'/storage/emulated/0/Music/{normalize_name(artist)}/{normalize_name(album)}/{split(location_source)[1]}\n'.encode('utf8'))
 		location_destination = join(destination_dir, normalize_name(artist), normalize_name(album),
 			split(location_source)[1])
 		if os.path.isfile(location_destination):
@@ -70,6 +72,9 @@ def main():
 			os.makedirs(split(location_destination)[0])
 		print('Copying "{}" from {}'.format(name, album), flush=True)
 		shutil.copyfile(location_source, location_destination)
+	
+	command = f'sort {playlist_file_name} >temp && mv temp {playlist_file_name}'
+	subprocess.check_output(command, shell=True)
 
 if __name__ == '__main__':
 	main()
