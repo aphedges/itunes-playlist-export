@@ -73,7 +73,7 @@ def main():
 		print('Copying "{}" from {}'.format(name, album), flush=True)
 		shutil.copyfile(location_source, location_destination)
 	
-	command = f'sort {playlist_file_name} >temp && mv temp {playlist_file_name}'
+	command = f'sort {playlist_file_name} -o {playlist_file_name}'
 	subprocess.check_output(command, shell=True)
 
 if __name__ == '__main__':
