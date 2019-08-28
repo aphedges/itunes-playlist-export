@@ -9,7 +9,6 @@ from os.path import split
 import plistlib
 import re
 import shutil
-import subprocess
 from urllib.parse import unquote
 
 LIBRARY_FILE_NAME = r'D:\Alex\Music\iTunes\iTunes Library.xml'
@@ -46,7 +45,18 @@ def normalize_name(text: str) -> str:
         - Truncating the string to 40 characters (to stay within the Windows file path limit).
         - Removing trailing and leading whitespace for convenience.
     """
-    return re.sub(r'[<>:"/\|?*]', '_', text)[:40].strip()
+    return re.sub(r'[<>:"/\|?*]+', '_', text)[:40].strip()
+
+def write_m3u(playlist_songs: list, playlist_name: str, destination_dir: str):
+    """Writes songs to .m3u file ordered by album, then song"""
+    playlist_file_name = join(destination_dir, f'{normalize_name(playlist_name)}.m3u')
+    songs = [(album, split(location_source)[1], artist)
+        for name, artist, album, location_source in playlist_songs]
+    songs.sort()
+    with open(playlist_file_name, 'w', encoding='utf8') as playlist_file:
+        for album, file_name, artist in songs:
+            playlist_file.write('/storage/emulated/0/Music/'
+                               f'{normalize_name(artist)}/{normalize_name(album)}/{file_name}\n')
 
 def main():
     """Exports songs from a playlist (and the playlist itself) to another directory."""
@@ -62,14 +72,17 @@ def main():
     if not os.path.isdir(destination_dir):
         raise RuntimeError(f'The destination directory "{destination_dir}" does not exist!')
 
-    library_text = open(LIBRARY_FILE_NAME, mode='rb').read()
+    with open(LIBRARY_FILE_NAME, mode='rb') as library_file:
+        library_text = library_file.read()
     library = plistlib.loads(library_text)
+
     print(f'Reading playlist "{playlist_name}"')
     playlist = get_playlist(library, playlist_name)
-    playlist_file_name = join(destination_dir, f'{normalize_name(playlist_name)}.m3u')
+    playlist_songs = []
+
     for song in playlist:
         name, artist, album, location_source = get_song(library, song)
-        open(playlist_file_name, 'ab').write(f'/storage/emulated/0/Music/{normalize_name(artist)}/{normalize_name(album)}/{split(location_source)[1]}\n'.encode('utf8'))
+        playlist_songs.append((name, artist, album, location_source))
         location_destination = join(destination_dir, normalize_name(artist), normalize_name(album),
             split(location_source)[1])
         if os.path.isfile(location_destination):
@@ -79,8 +92,9 @@ def main():
         print(f'Copying "{name}" from {album}')
         shutil.copyfile(location_source, location_destination)
 
-    command = f'sort {playlist_file_name} -o {playlist_file_name}'
-    subprocess.check_output(command, shell=True)
+    print(f'Writing playlist "{playlist_name}"')
+    write_m3u(playlist_songs, playlist_name, destination_dir)
+
 
 if __name__ == '__main__':
     main()
